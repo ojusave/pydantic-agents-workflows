@@ -8,6 +8,9 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { AnswerResponse } from '@/types'
 import { getSessionLogs, type SessionLogsResponse, type LogfireLog } from '@/lib/api'
 
+// Sample answers need the same labels in the detailed pipeline view.
+const simulated = process.env.NEXT_PUBLIC_DEMO_MODE === 'simulated'
+
 interface AnswerDisplayProps {
   answer: AnswerResponse
 }
@@ -311,6 +314,12 @@ export default function AnswerDisplay({ answer }: AnswerDisplayProps) {
             {/* Overall Summary */}
             <div className="p-4 bg-zinc-900 border border-zinc-800">
               <h3 className="text-sm font-semibold text-white mb-3">Execution summary</h3>
+              {/* Logical stages group work; each model request is its own Render task. */}
+              <p className="text-xs text-zinc-400 mb-3">
+                These are logical stages. A stage can start several model tasks through the native Render integration.
+                {' '}Individual task runs and retries appear in the Render dashboard.
+                {simulated && ' Model results, scores, token counts, and costs below are simulated.'}
+              </p>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-zinc-400">Total Duration:</span>
@@ -321,7 +330,7 @@ export default function AnswerDisplay({ answer }: AnswerDisplayProps) {
                   </span>
                 </div>
                 <div>
-                  <span className="text-zinc-400">Total Cost:</span>
+                  <span className="text-zinc-400">{simulated ? "Simulated cost:" : "Total Cost:"}</span>
                   <span className="ml-2 text-white font-medium">${answer.total_cost.toFixed(4)}</span>
                 </div>
                 <div>
@@ -357,10 +366,15 @@ export default function AnswerDisplay({ answer }: AnswerDisplayProps) {
                   if (m.embedding_dimensions) metadataStrings.push(`${m.embedding_dimensions}D`)
                 }
                 
-                // Add duration and cost
-                const duration = stage.duration_ms < 1000 
-                  ? `${stage.duration_ms.toFixed(0)}ms` 
-                  : `${(stage.duration_ms / 1000).toFixed(2)}s`
+                // Zero is the backend's missing-measurement default. The last two
+                // stages share one timer for all three concurrent reviewers.
+                const measured = stage.duration_ms > 0
+                  ? `${(stage.duration_ms / 1000).toFixed(2)}s`
+                  : 'Time not measured'
+                const sharedReview = ['technical_accuracy', 'quality_evaluation'].includes(stage.stage)
+                const duration = sharedReview && stage.duration_ms > 0
+                  ? `${measured} review group`
+                  : measured
                 const cost = `$${stage.cost_usd.toFixed(4)}`
                 
                 return (
@@ -387,10 +401,10 @@ export default function AnswerDisplay({ answer }: AnswerDisplayProps) {
                       <div className="text-sm text-white flex-1">
                         <span className="font-medium">{stageName}</span>
                         {metadataStrings.length > 0 && (
-                          <span className="text-zinc-400"> — {metadataStrings.join(' • ')}</span>
+                          <span className="text-zinc-400"> · {metadataStrings.join(' • ')}</span>
                         )}
                         {stage.error && (
-                          <span className="text-red-400"> — {stage.error}</span>
+                          <span className="text-red-400"> · {stage.error}</span>
                         )}
                       </div>
                       <span className="text-xs text-zinc-500 whitespace-nowrap">{duration} • {cost}</span>
@@ -453,7 +467,7 @@ export default function AnswerDisplay({ answer }: AnswerDisplayProps) {
                       logs.logs.forEach((log: any) => spanMap.set(log.span_id, log))
 
                       // Pass 2: a span is a root if it has no parent OR its parent
-                      // isn't in this set (an orphan — e.g. a span whose parent lives
+                      // isn't in this set (an orphan · e.g. a span whose parent lives
                       // in another trace fragment). Promoting orphans to roots means
                       // nothing is silently dropped from the tree.
                       logs.logs.forEach((log: any) => {
