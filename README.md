@@ -2,14 +2,14 @@
 
 > Render Developer Q&A Assistant using the newly merged Pydantic AI Harness integration for Render Workflows.
 
-This migration branch pins the integration commit because it is not yet available in a public package release. See [Native integration rehearsal](NATIVE_INTEGRATION.md) for the changed execution model, reproducible checks, and current validation limits.
+This migration branch pins the integration commit because it is not yet available in a public package release. See [native integration setup](#native-integration-demo) for the changed execution model, reproducible checks, and current validation limits.
 
 [Open the hosted native-integration demo](https://pydantic-native-demo.onrender.com/).
 It runs real Render Workflows tasks with **simulated model responses**: answers,
 embeddings, source passages, scores, and model-cost estimates are examples.
 No OpenAI or Anthropic calls are made. The frontend labels this mode explicitly.
 The original real-provider setup below remains available; its Blueprint is
-separate from this fork's hosted simulation. See [hosted setup notes](NATIVE_INTEGRATION.md#hosted-simulation).
+separate from this fork's hosted simulation. See [hosted setup notes](#hosted-simulation).
 
 
 Intelligent question-answering system that demonstrates real-world AI observability patterns. This example project shows how to build, instrument, and monitor a multi-stage LLM pipeline with full cost tracking, quality evaluation, and performance monitoring.
@@ -22,6 +22,7 @@ https://github.com/user-attachments/assets/68c6ace5-b070-4c7c-9ab6-5d4342134956
 - [What This App Does](#what-this-app-does)
 - [What This Demonstrates](#what-this-demonstrates)
 - [Architecture](#architecture)
+- [Native Integration Demo](#native-integration-demo)
 - [Quick Start](#quick-start)
 - [Deploy to Render](#deploy-to-render)
 - [Example Metrics](#example-metrics)
@@ -178,6 +179,86 @@ render-qa-assistant/
 ```
 
 ---
+
+## Native Integration Demo
+
+The seven agents send each model request to a separately scheduled Render task
+through `RenderWorkflows`. If a model call fails, Render can retry that call while
+completed document retrieval stays done. See the [shared task registry](workflows/runtime.py),
+[agent configuration](backend/pipeline/_agents.py), and [pipeline](workflows/app.py).
+Embeddings and database operations remain in the root task. Root retries are
+disabled because restarting the root repeats its work. The three final reviewers
+run concurrently, as they did before the migration.
+
+The checked dependencies use merged Pydantic commit
+`cc3172717752395b7475e545338950235533ccb8`: AI/graph
+`2.55.1.dev56+cc317271`, Harness `0.55.1.dev56+cc317271`, and Render SDK `1.2.0`.
+`uv sync --frozen` installs the versions recorded in `uv.lock`.
+
+### Local simulation
+
+Use Python 3.13, uv, Node.js, the Render CLI, and PostgreSQL 17 with pgvector.
+Before starting, create the dedicated local database `pydantic_demo_test` on
+`127.0.0.1:55437`. From the repository directory, copy `.env.test.example` to
+`.env.test.local` and replace `YOUR_LOCAL_POSTGRES_USER` with its database owner.
+The example contains dummy provider keys; no real model keys are needed.
+
+Install Python dependencies and seed two example passages. Seeding replaces
+only this dedicated test database's document rows:
+
+```sh
+uv sync --frozen
+.venv/bin/python -m tests.local_worker --seed
+```
+
+Start each of these servers in a separate terminal, from the repository directory:
+
+```sh
+# Register the native tasks with the local Render task server.
+render workflows dev --env-file .env.test.local --port 8127 -- .venv/bin/python -m tests.local_worker
+```
+
+```sh
+# Accept browser questions on port 8040 and forward them to the task server.
+.venv/bin/python -m tests.local_worker --api
+```
+
+```sh
+# Build a frontend that calls the local gateway and labels all sample results.
+npm ci --prefix frontend
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8040 NEXT_PUBLIC_DEMO_MODE=simulated npm run build --prefix frontend
+PORT=3040 npm run start --prefix frontend
+```
+
+Open [localhost:3040](http://localhost:3040) and ask “What web service deployment
+options does Render offer?” The result contains a simulated answer, two sources,
+two claims, and seven logical stages. Run `.venv/bin/python -m tests.test_local_integration`
+in another terminal to check success, isolated model retries, empty claims, and
+persistent failure. Stop the three app servers with Control-C in their terminals.
+Keep `.env.test.local` and `.local/` out of commits; both are ignored by Git.
+
+### Hosted simulation
+
+The hosted demo uses `.venv/bin/python -m workflows.demo` for its workflow and
+`.venv/bin/python -m workflows.demo --api` for its gateway. Both require
+`DEMO_MODE=simulated` and `DATABASE_URL` for a dedicated database named
+`pydantic_native_demo_db`. The gateway also needs `RENDER_API_KEY` and
+`WORKFLOW_SLUG`. It seeds two example passages once and preserves saved questions.
+Provider calls are replaced before agents are constructed; real model keys are
+not needed. Local failure-test phrases are disabled in this hosted mode.
+
+Build the frontend with `NEXT_PUBLIC_DEMO_MODE=simulated` and `NEXT_PUBLIC_API_URL`
+set to the gateway URL. Its `start` command serves the exported files on Render's
+assigned port. The static server uses `compression` 1.8.2 through an override
+because `serve` 14.2.6 pins the affected 1.8.1 release. The regular `workflows.app`
+entrypoint remains available for real providers with their credentials.
+
+Verified October 13, 2026: all four local checks passed. The hosted registry
+contained 46 task definitions; both a direct cloud run and a public-browser run
+completed one root and eight model tasks across seven agents. The three review
+tasks overlapped, and saved history was retrieved successfully. The frontend
+build passed. These checks establish application flow with simulated responses;
+answer quality, model costs, and real documentation-search quality were not measured.
 
 ## Quick Start
 

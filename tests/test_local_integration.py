@@ -1,6 +1,6 @@
 """Check real local HTTP and Workflows behavior using the synthetic worker.
 
-Start the services described in NATIVE_INTEGRATION.md, then run this module.
+Start the local simulation described in README.md, then run this module.
 These checks never use provider keys and never access a hosted Render service.
 """
 
