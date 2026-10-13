@@ -10,6 +10,9 @@ import HistoryPanel from '@/components/HistoryPanel'
 import { askQuestion } from '@/lib/api'
 import type { AnswerResponse, ProgressUpdate } from '@/types'
 
+// This build setting identifies the hosted rehearsal before a question is sent.
+const simulated = process.env.NEXT_PUBLIC_DEMO_MODE === 'simulated'
+
 export default function Home() {
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState<ProgressUpdate[]>([])
@@ -100,6 +103,15 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Keep the simulation boundary visible before and after every answer. */}
+      {simulated && (
+        <aside className="border-b border-amber-700 bg-amber-950/40 px-4 sm:px-8 lg:px-12 py-4 text-sm text-amber-200">
+          <strong>Simulated model demo.</strong> Render Workflows tasks and saved history are real.
+          {' '}Answers, source passages, scores, token counts, and model cost estimates are fixed examples.
+          {' '}No OpenAI or Anthropic calls are made. Try: “What web service deployment options does Render offer?”
+        </aside>
+      )}
+
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
@@ -182,7 +194,7 @@ export default function Home() {
             </a>
             <span>•</span>
             <a
-              href="https://github.com/render-examples/pydantic-agents-workflows"
+              href="https://github.com/ojusave/pydantic-agents-workflows/tree/pydantic-native-workflows"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-purple-400 transition-colors flex items-center gap-1"

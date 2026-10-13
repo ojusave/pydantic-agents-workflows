@@ -148,3 +148,23 @@ This preserves the database and run evidence. To restart that same database:
 
 Then start the three app servers above. Keep `.env.test.local` and `.local/`
 out of commits; `.gitignore` already excludes both.
+
+
+## Hosted simulation
+
+The `workflows.demo` entrypoint runs the same native Render task registry with
+fixed model responses and embeddings. It requires `DEMO_MODE=simulated` and a
+dedicated database named `pydantic_native_demo_db`. It never needs real model keys.
+Use `.venv/bin/python -m workflows.demo` for the workflow service and
+`.venv/bin/python -m workflows.demo --api` for the HTTP gateway. The gateway seeds
+two example passages once and preserves saved questions on later deployments.
+
+The frontend uses `NEXT_PUBLIC_DEMO_MODE=simulated` and the gateway URL in
+`NEXT_PUBLIC_API_URL` at build time. Its `start` command serves the exported `out`
+folder on Render's assigned port, using `serve` on a paid Node web service.
+The banner and score labels identify synthetic answers and estimates. Render task
+execution and database history are real; quality and cost numbers are examples,
+not measurements of provider quality or billed charges. Local failure-injection
+phrases are disabled in the hosted simulation because cloud workers do not share
+local marker files. The regular `workflows.app` entrypoint remains the real-model
+path and requires provider credentials.

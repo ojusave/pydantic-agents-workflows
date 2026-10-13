@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import { AnswerResponse } from '@/types'
 
+// The hosted rehearsal uses sample scores, so label them where they appear.
+const simulated = process.env.NEXT_PUBLIC_DEMO_MODE === 'simulated'
+
 interface MetricsPanelProps {
   answer: AnswerResponse
 }
@@ -48,13 +51,13 @@ export default function MetricsPanel({ answer }: MetricsPanelProps) {
     <div className="space-y-6">
       {/* Confidence score Card */}
       <div className="bg-black border border-zinc-800 p-6 hover:border-zinc-700 transition-colors duration-200">
-        <h3 className="text-lg font-semibold text-zinc-300 mb-4">Confidence score</h3>
+        <h3 className="text-lg font-semibold text-zinc-300 mb-4">{simulated ? 'Simulated score' : 'Confidence score'}</h3>
         
         <div className={`${colors.bg} border ${colors.border} p-4 mb-4`}>
           <div className="flex items-center gap-3 mb-2">
             <div className={`w-3 h-3 rounded-full ${colors.dot}`}></div>
             <span className={`text-sm font-semibold ${colors.text} tracking-wide`}>
-              {getConfidenceLabel(confidenceScore)}
+              {simulated ? 'Fixed example, not a correctness probability' : getConfidenceLabel(confidenceScore)}
             </span>
           </div>
           <div className={`text-3xl font-bold ${colors.text}`}>
@@ -128,7 +131,7 @@ export default function MetricsPanel({ answer }: MetricsPanelProps) {
 
             {/* Cost */}
             <div className="flex justify-between items-center">
-              <span className="text-sm text-zinc-400">Total Cost</span>
+              <span className="text-sm text-zinc-400">{simulated ? 'Simulated model cost' : 'Total Cost'}</span>
               <span className="text-sm text-yellow-500 font-medium">
                 {formatCost(answer.total_cost || 0)}
               </span>
@@ -147,7 +150,7 @@ export default function MetricsPanel({ answer }: MetricsPanelProps) {
 
       {/* Pipeline Cost breakdown Card */}
       <div className="bg-black border border-zinc-800 p-6 hover:border-zinc-700 transition-colors duration-200">
-        <h3 className="text-lg font-semibold text-zinc-300 mb-4">Cost breakdown</h3>
+        <h3 className="text-lg font-semibold text-zinc-300 mb-4">{simulated ? 'Simulated cost breakdown' : 'Cost breakdown'}</h3>
         
         {/* Summary always visible */}
         <div className="mb-4">
@@ -156,7 +159,7 @@ export default function MetricsPanel({ answer }: MetricsPanelProps) {
               {formatCost(answer.total_cost || 0)}
             </div>
             <p className="text-xs text-zinc-400">
-              Total API cost
+              {simulated ? "Example estimate, no model charges" : "Total API cost"}
             </p>
           </div>
         </div>
