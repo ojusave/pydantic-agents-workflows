@@ -42,8 +42,9 @@ Input: "What database plans does Render offer?"
 Output: {"queries": ["What are the Postgres instance types and pricing?", "What Key Value datastore plans does Render provide?"]}
 """
 
+# Optional query expansion gets its own task and retry budget.
 _query_expansion_agent = openai_agent(
-    settings.query_expansion_model, QUERY_EXPANSION_INSTRUCTIONS, output_type=QueryExpansionOutput
+    settings.query_expansion_model, QUERY_EXPANSION_INSTRUCTIONS, output_type=QueryExpansionOutput, name="query_expansion"
 )
 
 

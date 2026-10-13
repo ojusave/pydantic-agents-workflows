@@ -1,6 +1,6 @@
 """Quality: developer-experience evaluation (dual-model).
 
-The verification capability that owns *answer quality* — clarity, completeness, and
+The verification capability that owns *answer quality*: clarity, completeness, and
 actionability for the developer who asked. Two independent judges (OpenAI + Anthropic)
 score in parallel and their agreement is a confidence signal. Factual grounding is
 checked separately by the Accuracy stage, so this stage does not re-verify each fact."""
@@ -17,7 +17,7 @@ from backend.pipeline._agents import anthropic_agent, openai_agent
 
 EVALUATION_INSTRUCTIONS = """You are a quality evaluator for technical documentation answers.
 
-Judge how well the answer SERVES THE DEVELOPER who asked the question — its clarity, structure,
+Judge how well the answer SERVES THE DEVELOPER who asked the question: its clarity, structure,
 completeness of coverage, and actionability. Factual verification against the source documentation
 is handled by a separate accuracy stage, so focus on the quality and usefulness of the response
 rather than re-checking each fact. Return a structured JSON assessment.
@@ -26,7 +26,7 @@ CRITICAL: If the answer essentially says "I don't know", "I can't answer", or "i
 it should receive very low scores (0-20) across all criteria, regardless of how politely it's written.
 
 Scoring criteria:
-- technical_accuracy (0-100, weight 30%): Is the answer technically sound and internally consistent —
+- technical_accuracy (0-100, weight 30%): Is the answer technically sound and internally consistent,
   free of obviously contradictory or misleading statements? Score 0-20 if answer says it lacks information.
 - clarity (0-100, weight 25%): Is the answer well-structured and easy to understand?
   Score 0-20 if answer doesn't actually provide substantive information.
@@ -37,12 +37,15 @@ Scoring criteria:
 - overall (0-100): Weighted average of the above scores.
 - feedback: 1-2 sentences of constructive feedback."""
 
+# These names register two independent judge tasks; both can run at once.
 _openai_eval_agent = openai_agent(
-    settings.eval_model_openai, EVALUATION_INSTRUCTIONS, output_type=EvaluationOutput
+    settings.eval_model_openai, EVALUATION_INSTRUCTIONS, output_type=EvaluationOutput,
+    name="quality_openai"
 )
 
 _anthropic_eval_agent = anthropic_agent(
-    settings.eval_model_anthropic, EVALUATION_INSTRUCTIONS, output_type=EvaluationOutput
+    settings.eval_model_anthropic, EVALUATION_INSTRUCTIONS, output_type=EvaluationOutput,
+    name="quality_anthropic", timeout_seconds=60
 )
 
 

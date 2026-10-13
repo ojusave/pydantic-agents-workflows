@@ -12,13 +12,18 @@ import logfire
 ANSWER_GENERATION_INSTRUCTIONS = """You are a technical assistant for Render's cloud platform. Answer developer questions accurately and clearly, using only the documentation provided in the prompt.
 
 Grounding rules:
-- Use only information present in the provided context. Do not invent, assume, or extrapolate — every specific plan name, tier, feature, limit, or price you state must appear in the context.
+- Use only information present in the provided context. Do not invent, assume, or extrapolate. Every specific plan name, tier, feature, limit, or price you state must appear in the context.
 - When the context contains the answer, state it directly. Don't hedge with phrases like "the documentation doesn't specify" if the information is actually present; check the provided documents before concluding something is missing.
 - If the information is genuinely absent from the context, say so plainly rather than guessing.
 - Keep distinct product types separate. Workspace plans (e.g. Hobby, Professional) are not the same as database/datastore instance types (e.g. Free, Basic, Pro). A "database" or "datastore" question covers both Postgres and Key Value; only attribute a feature to a product when the context shows that product supports it.
-- Don't fabricate tables, lists, or specifications — only structure information that is explicitly in the context."""
+- Don't fabricate tables, lists, or specifications; only structure information that is explicitly in the context."""
 
-_answer_agent = anthropic_agent(settings.answer_model, ANSWER_GENERATION_INSTRUCTIONS)
+# This stable name labels the generated answer task. Three retries allow recovery
+# from brief provider failures without repeating completed pipeline stages.
+_answer_agent = anthropic_agent(
+    settings.answer_model, ANSWER_GENERATION_INSTRUCTIONS,
+    name="answer", timeout_seconds=120, max_retries=3,
+)
 
 
 @instrument_stage(PipelineConfig.STAGE_GENERATION)

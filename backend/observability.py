@@ -15,7 +15,9 @@ from backend.config import settings
 
 # Configure Logfire
 logfire.configure(
-    token=settings.logfire_token,
+    token=settings.logfire_token or None,
+    # Empty tokens keep traces local rather than looking for unrelated saved credentials.
+    send_to_logfire=bool(settings.logfire_token),
     service_name="render-qa-assistant",
     environment=settings.environment,
 )
@@ -158,9 +160,10 @@ def usage_and_cost(result, cost_fn, model: str) -> dict:
 
     Returns a dict with ``input_tokens``, ``output_tokens``, ``cost_usd``.
     """
-    usage = result.usage()
-    input_tokens = usage.request_tokens or 0
-    output_tokens = usage.response_tokens or 0
+    # The pinned Pydantic AI version exposes usage as data, not a method.
+    usage = result.usage
+    input_tokens = usage.input_tokens or 0
+    output_tokens = usage.output_tokens or 0
     return {
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,

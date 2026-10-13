@@ -44,8 +44,9 @@ passage states it almost verbatim, ~0.6-0.8 when it is clearly implied, lower wh
 - Use ONLY the provided passages. Do NOT rely on outside knowledge."""
 
 
+# Every claim uses this same named task, with a separate run and retry budget.
 _verification_agent = openai_agent(
-    settings.claims_model, VERIFICATION_INSTRUCTIONS, output_type=ClaimVerdict
+    settings.claims_model, VERIFICATION_INSTRUCTIONS, output_type=ClaimVerdict, name="claim_verifier"
 )
 
 
@@ -84,13 +85,14 @@ Decide whether the passages substantiate the claim."""
         model_settings={"temperature": 0.0, "max_tokens": 500},
     )
     verdict: ClaimVerdict = result.output
-    usage = result.usage()
-    input_tokens = usage.request_tokens or 0
-    output_tokens = usage.response_tokens or 0
+    # The pinned Pydantic AI version exposes usage as data, not a method.
+    usage = result.usage
+    input_tokens = usage.input_tokens or 0
+    output_tokens = usage.output_tokens or 0
 
     # Map the cited passage indices back to their sources (guard against out-of-range).
     # If the judge supports the claim but names no passage, we leave the citation list
-    # empty rather than fabricating one from the top retrieved doc — an honest
+    # empty rather than fabricating one from the top retrieved doc. An honest
     # "verified, no specific source cited" beats a possibly-wrong attribution.
     cited = [docs[i - 1].source for i in verdict.supporting_doc_indices if 1 <= i <= len(docs)]
 
@@ -127,8 +129,9 @@ async def verify_claims(claims: List[str]) -> dict:
 
     logfire.info(f"Verifying {len(claims)} claims")
 
+    # Empty claims are valid; retain the token field expected by the root task.
     if not claims:
-        return {"verified_claims": [], "verification_rate": 0.0, "cost_usd": 0.0}
+        return {"verified_claims": [], "verification_rate": 0.0, "cost_usd": 0.0, "tokens_used": 0}
 
     # Batch embed all claims in a single API call
     batch_result = await embedder.embed_documents(claims)

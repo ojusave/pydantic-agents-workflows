@@ -64,3 +64,6 @@ Thumbs.db
 
 # Data
 
+
+# Local rehearsal database and test evidence must stay on this computer.
+.local/

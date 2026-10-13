@@ -3,7 +3,7 @@
 The verification capability that owns *factual correctness*. It judges whether the
 answer is grounded in the documentation (via the extracted + verified claims) and
 emits errors/corrections that feed the refinement loop. Answer style, structure, and
-completeness are out of scope here — those are judged by the Quality stage."""
+completeness are judged separately by the Quality stage."""
 
 from typing import List
 
@@ -16,7 +16,7 @@ import logfire
 
 ACCURACY_CHECK_INSTRUCTIONS = """You are the technical-accuracy reviewer for Render documentation answers.
 
-Your job — and only your job — is to judge whether the answer is FACTUALLY CORRECT and GROUNDED in the documentation. Clarity, structure, verbosity, and completeness are evaluated separately by the quality stage; do not penalize the answer for those here.
+Your only job is to judge whether the answer is FACTUALLY CORRECT and GROUNDED in the documentation. Clarity, structure, verbosity, and completeness are evaluated separately by the quality stage; do not penalize the answer for those here.
 
 You are given the answer plus the claims extracted from it and their verification results. Use them to assess factual grounding and return a structured assessment.
 
@@ -42,8 +42,9 @@ Return a JSON object with:
 - errors (list of technical errors or inaccuracies found, empty list if none)
 - corrections (list of suggested corrections, empty list if none)"""
 
+# The name identifies the accuracy model task in Render task history.
 _accuracy_agent = anthropic_agent(
-    settings.accuracy_model, ACCURACY_CHECK_INSTRUCTIONS, output_type=AccuracyOutput
+    settings.accuracy_model, ACCURACY_CHECK_INSTRUCTIONS, output_type=AccuracyOutput, name="accuracy"
 )
 
 

@@ -99,7 +99,8 @@ async def health_check():
     return HealthCheck(
         status="healthy" if db_healthy else "degraded",
         database_connected=db_healthy,
-        logfire_enabled=True
+        # An empty token intentionally keeps this local rehearsal off hosted Logfire.
+        logfire_enabled=bool(settings.logfire_token)
     )
 
 

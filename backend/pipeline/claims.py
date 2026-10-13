@@ -11,8 +11,8 @@ import logfire
 
 CLAIMS_EXTRACTION_INSTRUCTIONS = """Extract the verifiable factual claims from answers about Render's platform.
 
-A factual claim is a specific statement about Render's own platform — its features, products, pricing, \
-limits, or documented behavior — that could be checked against Render's documentation.
+A factual claim is a specific statement about Render's platform (its features, products, pricing, \
+limits, or documented behavior) that could be checked against Render's documentation.
 
 Each extracted claim must be:
 - A single, specific, atomic fact (one sentence)
@@ -32,8 +32,9 @@ When in doubt, prefer fewer, higher-quality claims that are concrete Render fact
 Return a JSON object with a "claims" array of claim strings."""
 
 
+# A distinct task name keeps claims extraction separate from other GPT calls.
 _claims_agent = openai_agent(
-    settings.claims_model, CLAIMS_EXTRACTION_INSTRUCTIONS, output_type=ClaimsOutput
+    settings.claims_model, CLAIMS_EXTRACTION_INSTRUCTIONS, output_type=ClaimsOutput, name="claims"
 )
 
 

@@ -1,6 +1,8 @@
 # Pydantic Agents
 
-> Render Developer Q&A Assistant showcasing observable AI with Pydantic Agents, Pydantic Embedder, Logfire, and Render Workflows
+> Render Developer Q&A Assistant using the newly merged Pydantic AI Harness integration for Render Workflows.
+
+This migration branch pins the integration commit because it is not yet available in a public package release. See [Native integration rehearsal](NATIVE_INTEGRATION.md) for the changed execution model, reproducible checks, and current validation limits.
 
 <a href="https://render.com/deploy?repo=https://github.com/render-examples/pydantic-agents-workflows">
   <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" height="32">
@@ -34,7 +36,7 @@ This is an **AI-powered Q&A assistant for Render documentation**. Users can ask 
 1. **Ask a question** - "How do I deploy a Node.js app on Render?" or "What database plans are available?"
 2. **Watch the pipeline** - Track progress as the run moves through 7 stages (embedding → retrieval → generation → verification)
 3. **Get accurate answers** - Receive detailed responses with sources from Render docs
-4. **Quality guaranteed** - Every answer is verified for accuracy and rated by dual AI evaluators
+4. **Automated quality checks** - Two AI evaluators rate the answer; their scores do not guarantee factual accuracy.
 
 ### Key Features
 
@@ -74,7 +76,7 @@ This project is built end-to-end on the [Pydantic](https://pydantic.dev/) ecosys
 - **[Pydantic AI Agents](https://ai.pydantic.dev/agents/)** — every pipeline stage (generation, claims extraction, accuracy check, dual-rater evaluation) is a `pydantic_ai.Agent` with a typed `output_type`. Multi-provider orchestration (Claude + GPT) runs through `OpenAIProvider` / `AnthropicProvider` in a single pipeline. See [`backend/pipeline/`](./backend/pipeline/).
 - **[Pydantic Embedder](https://ai.pydantic.dev/embeddings/)** — `pydantic_ai.Embedder` with `OpenAIEmbeddingModel` powers question embedding (`embed_query`) and batch claim embedding (`embed_documents`) for verification. Auto-instrumented by `logfire.instrument_pydantic_ai()`. See [`backend/pipeline/embeddings.py`](./backend/pipeline/embeddings.py) and [`backend/pipeline/verification.py`](./backend/pipeline/verification.py).
 - **[Pydantic Models](https://docs.pydantic.dev/)** — Claims, accuracy scores, eval dimensions, and pipeline state are parsed directly into Pydantic models (e.g. `ClaimsOutput`, `EvaluationOutput`). `pydantic-settings` manages config in [`backend/config.py`](./backend/config.py).
-- **[Pydantic GenAI Prices](https://github.com/pydantic/genai-prices)** — model pricing is loaded dynamically from the `pydantic/genai-prices` registry, then combined with per-agent token counts from `result.usage()` to produce per-stage cost attribution. See [`backend/prices.py`](./backend/prices.py).
+- **[Pydantic GenAI Prices](https://github.com/pydantic/genai-prices)** — model pricing is loaded dynamically from the `pydantic/genai-prices` registry, then combined with per-agent token counts from `result.usage` to produce per-stage cost attribution. See [`backend/prices.py`](./backend/prices.py).
 - **[Logfire](https://logfire.pydantic.dev/)** — distributed traces, custom metrics, dual-model evals, and cost attribution. Auto-instruments FastAPI, AsyncPG, HTTPX, and Pydantic AI. See [`backend/observability.py`](./backend/observability.py).
 
 ---
@@ -112,27 +114,24 @@ stage updates there, and `GET /ask/{run_id}` reads them back), plus `/history`, 
 
 ### Pipeline stages
 
-`run_qa_pipeline` orchestrates seven stages, promoting only the expensive ones to their own tasks:
+`run_qa_pipeline` calls the existing Python pipeline functions. The new
+`RenderWorkflows` capability automatically sends each attached agent's model
+requests to separately retried Render tasks.
 
-| # | Stage | Model | Execution |
-|---|-------|-------|-----------|
-| 1 | Question embedding | OpenAI embeddings | in-process |
-| 2 | Hybrid retrieval (pgvector + BM25, LLM multi-query expansion) | `gpt-4.1-nano` | in-process |
-| 3 | Answer generation | Claude | subtask (3 retries) |
-| 4 | Claims extraction | GPT | subtask |
-| 5 | Claims verification (RAG) | OpenAI embeddings | subtask |
-| 6 | Factual-grounding check | Claude | subtask, parallel with 7 |
-| 7 | Dual-model quality rating | OpenAI + Anthropic | 2 subtasks, parallel with 6 |
+| # | Stage | Execution with the native integration |
+|---|-------|---------------------------------------|
+| 1 | Question embedding | Runs inside the root task |
+| 2 | Document retrieval | Database search stays in the root; optional query-expansion model request is a child task |
+| 3 | Answer generation | Native model task, up to three retries |
+| 4 | Claims extraction | Native model task; output validated in the root |
+| 5 | Claims verification | Embeddings and database search in the root; one native model task per claim |
+| 6 | Factual-grounding check | Native model task, concurrent with both quality judges |
+| 7 | Dual-model quality rating | Two native model tasks, concurrent with stage 6 |
 
-Ingestion runs the same way: `ingest_all` → `ingest_core`, then `ingest_source` fanned out over
-the source registry in [`data/sources.py`](./data/sources.py). A daily cron job triggers it, and
-the `api` service re-seeds pre-embedded pages in its `preDeployCommand`.
-
-> **Why hybrid?** Workflows aren't HTTP-facing, so a client (the gateway) triggers tasks
-> via the SDK and reads run status. Stages 1 and 2 are cheap/data-dependent and stay
-> in-process on the orchestrator; only the heavy, independently-retryable LLM stages are
-> promoted to their own tasks. Stages 6 + 7 run as three concurrent subtasks on separate
-> instances. See [`workflows/app.py`](./workflows/app.py).
+A child retry repeats only the failed model operation. Root retries are disabled
+because restarting the root repeats earlier work; this integration does not
+checkpoint the entire Python function. Ingestion retains the existing explicit
+`ingest_core`, `ingest_source`, and `ingest_all` Render tasks.
 
 ### Project Structure
 
@@ -149,7 +148,8 @@ render-qa-assistant/
 │   ├── observability.py           # Logfire configuration
 │   └── config.py                  # Settings management
 ├── workflows/                     # Render Workflows service
-│   ├── app.py                     # Workflows() instance + all @app.task defs
+│   ├── app.py                     # Root pipeline and explicit ingestion tasks
+│   ├── runtime.py                 # Shared registry and root Render activation
 │   ├── serialization.py           # JSON boundary helpers (model_dump/model_validate)
 │   └── trigger_ingest.py          # Cron entrypoint → start_task("…/ingest_all")
 ├── frontend/
