@@ -5,6 +5,9 @@ import { FaListCheck, FaXmark } from 'react-icons/fa6'
 import { getHistory, deleteSession, clearAllHistory, type HistorySession } from '@/lib/api'
 import type { AnswerResponse } from '@/types'
 
+// Keep simulation labels visible in saved history and before an answer arrives.
+const simulated = process.env.NEXT_PUBLIC_DEMO_MODE === 'simulated'
+
 interface HistoryPanelProps {
   onLoadSession: (session: AnswerResponse) => void
   isOpen: boolean
@@ -296,7 +299,7 @@ export default function HistoryPanel({ onLoadSession, isOpen, onToggle }: Histor
                             <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
-                            {confidenceScore}% confidence
+                            {confidenceScore}% {simulated ? 'simulated score' : 'confidence'}
                           </span>
                           
                           {/* Bottom right: Checkbox (only in selection mode) */}

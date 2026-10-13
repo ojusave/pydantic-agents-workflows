@@ -1,5 +1,8 @@
 'use client'
 
+// Keep simulation labels visible in saved history and before an answer arrives.
+const simulated = process.env.NEXT_PUBLIC_DEMO_MODE === 'simulated'
+
 interface MetricsSkeletonProps {
   loading: boolean
 }
@@ -9,7 +12,7 @@ export default function MetricsSkeleton({ loading }: MetricsSkeletonProps) {
     <div className="space-y-6">
       {/* Confidence score Card */}
       <div className="bg-black border border-zinc-800 p-6">
-        <h3 className="text-lg font-semibold text-zinc-300 mb-4">Confidence score</h3>
+        <h3 className="text-lg font-semibold text-zinc-300 mb-4">{simulated ? 'Simulated score' : 'Confidence score'}</h3>
         
         {loading ? (
           // Skeleton loading state
@@ -39,7 +42,7 @@ export default function MetricsSkeleton({ loading }: MetricsSkeletonProps) {
 
       {/* Cost breakdown Card */}
       <div className="bg-black border border-zinc-800 p-6">
-        <h3 className="text-lg font-semibold text-zinc-300 mb-4">Cost breakdown</h3>
+        <h3 className="text-lg font-semibold text-zinc-300 mb-4">{simulated ? 'Simulated cost breakdown' : 'Cost breakdown'}</h3>
 
         {loading ? (
           // Skeleton loading state
