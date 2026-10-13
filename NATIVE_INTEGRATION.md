@@ -168,3 +168,22 @@ not measurements of provider quality or billed charges. Local failure-injection
 phrases are disabled in the hosted simulation because cloud workers do not share
 local marker files. The regular `workflows.app` entrypoint remains the real-model
 path and requires provider credentials.
+
+
+Hosted verification on October 13, 2026: the native registry contained 46 task
+definitions. A direct cloud rehearsal completed one root task and eight model
+request tasks across seven agents. All eight were children of the root; the
+three review tasks had overlapping execution intervals. The returned answer had
+two sources, two claims, and seven logical stages. Saved history was independently
+retrieved through the hosted API. Local success, retry, empty-claim, and persistent
+failure checks also passed after the shared simulation helper was introduced.
+These results verify task execution and application flow with simulated providers.
+
+The static server uses a `compression` override at 1.8.2 because `serve` 14.2.6
+pins the affected 1.8.1 release. Next.js generates static files during the build;
+`serve` handles public frontend requests.
+
+The public browser flow also completed: submitting a question started the hosted
+workflow, displayed progress, returned the simulated answer, and showed corrected
+score, cost, and timing labels. The cloud task record independently confirmed the
+browser-triggered root completed. No real-provider quality claim follows from it.

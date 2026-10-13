@@ -4,9 +4,13 @@
 
 This migration branch pins the integration commit because it is not yet available in a public package release. See [Native integration rehearsal](NATIVE_INTEGRATION.md) for the changed execution model, reproducible checks, and current validation limits.
 
-<a href="https://render.com/deploy?repo=https://github.com/render-examples/pydantic-agents-workflows">
-  <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" height="32">
-</a>
+[Open the hosted native-integration demo](https://pydantic-native-demo.onrender.com/).
+It runs real Render Workflows tasks with **simulated model responses**: answers,
+embeddings, source passages, scores, and model-cost estimates are examples.
+No OpenAI or Anthropic calls are made. The frontend labels this mode explicitly.
+The original real-provider setup below remains available; its Blueprint is
+separate from this fork's hosted simulation. See [hosted setup notes](NATIVE_INTEGRATION.md#hosted-simulation).
+
 
 Intelligent question-answering system that demonstrates real-world AI observability patterns. This example project shows how to build, instrument, and monitor a multi-stage LLM pipeline with full cost tracking, quality evaluation, and performance monitoring.
 
